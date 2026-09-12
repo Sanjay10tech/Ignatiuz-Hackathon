@@ -35,6 +35,7 @@ export async function login(
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
 
   if (error) {
+    console.error("[auth.login]", error.status, error.message);
     // Avoid leaking whether an account exists; keep the message generic.
     return { error: "Invalid email or password." };
   }
@@ -64,7 +65,10 @@ export async function signup(
   const { data, error } = await supabase.auth.signUp(parsed.data);
 
   if (error) {
-    return { error: "Could not create your account. Please try again." };
+    console.error("[auth.signup]", error.status, error.message);
+    return {
+      error: error.message || "Could not create your account. Please try again.",
+    };
   }
 
   // When email confirmation is enabled, no session is returned yet.
