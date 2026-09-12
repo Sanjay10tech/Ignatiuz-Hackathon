@@ -12,13 +12,13 @@ const LABELS: Record<LeadStatus, string> = {
 
 const VARIANTS: Record<
   LeadStatus,
-  "default" | "secondary" | "outline" | "success" | "warning" | "destructive"
+  "neutral" | "info" | "warm" | "successSoft" | "destructive"
 > = {
-  new: "secondary",
-  analyzed: "default",
-  contacted: "warning",
-  qualified: "default",
-  converted: "success",
+  new: "neutral",
+  analyzed: "info",
+  contacted: "warm",
+  qualified: "info",
+  converted: "successSoft",
   lost: "destructive",
 };
 

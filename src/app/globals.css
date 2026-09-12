@@ -13,17 +13,17 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 221 83% 53%;
+    --primary: 235 78% 57%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96%;
+    --secondary: 226 44% 96%;
     --secondary-foreground: 222 47% 11%;
 
-    --muted: 210 40% 96%;
+    --muted: 220 33% 96%;
     --muted-foreground: 215 16% 47%;
 
-    --accent: 210 40% 96%;
-    --accent-foreground: 222 47% 11%;
+    --accent: 231 44% 95%;
+    --accent-foreground: 235 60% 40%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
@@ -34,11 +34,14 @@
     --warning: 38 92% 50%;
     --warning-foreground: 222 47% 11%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 221 83% 53%;
+    --border: 220 24% 90%;
+    --input: 220 24% 90%;
+    --ring: 235 78% 57%;
 
-    --radius: 0.5rem;
+    /* Tinted app canvas so white cards stand out. */
+    --app-bg: 226 48% 97%;
+
+    --radius: 0.625rem;
   }
 
   .dark {
@@ -51,7 +54,7 @@
     --popover: 222 45% 13%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 217 91% 60%;
+    --primary: 234 89% 68%;
     --primary-foreground: 222 47% 11%;
 
     --secondary: 217 33% 18%;
@@ -60,8 +63,8 @@
     --muted: 217 33% 18%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 217 33% 18%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 234 40% 24%;
+    --accent-foreground: 226 70% 85%;
 
     --destructive: 0 63% 45%;
     --destructive-foreground: 210 40% 98%;
@@ -74,7 +77,9 @@
 
     --border: 217 33% 20%;
     --input: 217 33% 20%;
-    --ring: 217 91% 60%;
+    --ring: 234 89% 68%;
+
+    --app-bg: 224 44% 9%;
   }
 }
 
@@ -83,7 +88,75 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+@layer components {
+  /* Indigo → blue brand gradient, used on auth hero and logo marks. */
+  .brand-gradient {
+    background-image: linear-gradient(
+      135deg,
+      hsl(235 78% 57%) 0%,
+      hsl(224 76% 48%) 55%,
+      hsl(199 89% 48%) 100%
+    );
+  }
+
+  /* Subtle dotted grid, for decorative branding panels. */
+  .grid-dots {
+    background-image: radial-gradient(
+      hsl(0 0% 100% / 0.16) 1px,
+      transparent 1px
+    );
+    background-size: 22px 22px;
+  }
+
+  /* Card lift on hover — used across dashboard/list cards. */
+  .card-hover {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md;
+  }
+
+  /* Tinted app canvas with a soft indigo glow at the top. */
+  .app-canvas {
+    background-color: hsl(var(--app-bg));
+    background-image: radial-gradient(
+        60rem 40rem at 100% -10%,
+        hsl(235 78% 57% / 0.08),
+        transparent 60%
+      ),
+      radial-gradient(
+        48rem 36rem at -10% 0%,
+        hsl(199 89% 48% / 0.06),
+        transparent 55%
+      );
+  }
+
+  /* Rich gradient hero surface for section headers. */
+  .hero-gradient {
+    background-image: linear-gradient(
+      120deg,
+      hsl(235 70% 20%) 0%,
+      hsl(233 66% 30%) 45%,
+      hsl(215 70% 38%) 100%
+    );
+  }
+
+  /* Frosted/elevated card treatment for prominent panels. */
+  .panel-elevated {
+    @apply border shadow-sm;
+    background-image: linear-gradient(
+      180deg,
+      hsl(0 0% 100%) 0%,
+      hsl(226 48% 99%) 100%
+    );
+  }
+  .dark .panel-elevated {
+    background-image: linear-gradient(
+      180deg,
+      hsl(222 45% 14%) 0%,
+      hsl(222 45% 12%) 100%
+    );
   }
 }

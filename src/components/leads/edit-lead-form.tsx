@@ -44,7 +44,7 @@ export function EditLeadForm({ lead }: { lead: Lead }) {
   return (
     <form action={formAction} noValidate>
       <input type="hidden" name="id" value={lead.id} />
-      <Card>
+      <Card className="panel-elevated">
         <CardHeader>
           <CardTitle>Edit lead</CardTitle>
         </CardHeader>

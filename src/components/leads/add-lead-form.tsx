@@ -53,7 +53,7 @@ export function AddLeadForm() {
 
   return (
     <form action={formAction} noValidate>
-      <Card>
+      <Card className="panel-elevated">
         <CardHeader>
           <CardTitle>Lead details</CardTitle>
           <CardDescription>

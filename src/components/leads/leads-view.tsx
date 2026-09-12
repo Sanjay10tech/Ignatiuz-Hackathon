@@ -40,11 +40,11 @@ export function LeadsView({ leads }: { leads: Lead[] }) {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by name or company"
           aria-label="Search leads by name or company"
-          className="h-9 w-full rounded-md border border-input bg-transparent pl-8 pr-3 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="h-10 w-full rounded-md border border-input bg-background pl-8 pr-3 text-sm shadow-sm placeholder:text-muted-foreground transition-colors hover:border-primary/40 focus-visible:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
         />
       </div>
 
-      <Card>
+      <Card className="panel-elevated">
         <CardContent className="p-0">
           {filtered.length > 0 ? (
             <LeadsTable leads={filtered} />

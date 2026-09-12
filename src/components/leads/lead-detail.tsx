@@ -52,7 +52,7 @@ export function LeadDetail({
         <DeleteLeadButton leadId={lead.id} leadName={lead.name} />
       </div>
 
-      <Card>
+      <Card className="panel-elevated">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle>Lead information</CardTitle>
           <LeadStatusBadge status={lead.status} />

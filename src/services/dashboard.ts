@@ -20,6 +20,19 @@ const NOT_CONFIGURED = "The backend is not configured.";
 const NOT_AUTHENTICATED = "You must be signed in to view the dashboard.";
 const GENERIC_FAILURE = "Something went wrong. Please try again.";
 
+export interface StatusDatum {
+  status: string;
+  label: string;
+  count: number;
+}
+
+export interface IndustryDatum {
+  industry: string;
+  count: number;
+  /** Average score for analyzed leads in this industry (null if none). */
+  averageScore: number | null;
+}
+
 export interface DashboardStats {
   total: number;
   hot: number;
@@ -32,7 +45,28 @@ export interface DashboardStats {
   /** Analyzed leads whose recommended action is still pending. */
   needingAction: number;
   recentLeads: Lead[];
+  /** Lead counts grouped by pipeline status. */
+  statusDistribution: StatusDatum[];
+  /** Lead counts and average score grouped by industry. */
+  byIndustry: IndustryDatum[];
 }
+
+const STATUS_LABELS: Record<string, string> = {
+  new: "New",
+  analyzed: "Analyzed",
+  contacted: "Contacted",
+  qualified: "Qualified",
+  converted: "Converted",
+  lost: "Lost",
+};
+const STATUS_ORDER = [
+  "new",
+  "analyzed",
+  "contacted",
+  "qualified",
+  "converted",
+  "lost",
+];
 
 const RECENT_LIMIT = 5;
 
@@ -84,6 +118,28 @@ export const dashboardService = {
     const total = leads.length;
     const recentLeads = leads.slice(0, RECENT_LIMIT);
 
+    // Status distribution (from lead rows directly).
+    const statusCounts = new Map<string, number>();
+    for (const l of leads) {
+      statusCounts.set(l.status, (statusCounts.get(l.status) ?? 0) + 1);
+    }
+    const statusDistribution: StatusDatum[] = STATUS_ORDER.filter((s) =>
+      statusCounts.has(s)
+    ).map((s) => ({
+      status: s,
+      label: STATUS_LABELS[s] ?? s,
+      count: statusCounts.get(s) ?? 0,
+    }));
+
+    // Map lead -> industry for per-industry score aggregation.
+    const industryByLead = new Map<string, string>();
+    const industryCounts = new Map<string, number>();
+    for (const l of leads) {
+      const industry = l.industry?.trim() || "Unspecified";
+      industryByLead.set(l.id, industry);
+      industryCounts.set(industry, (industryCounts.get(industry) ?? 0) + 1);
+    }
+
     // Pull all analyses for the user's leads, newest first, then keep the
     // latest per lead in JS (simple and avoids extra round trips).
     const leadIds = leads.map((l) => l.id);
@@ -92,6 +148,8 @@ export const dashboardService = {
     let cold = 0;
     let scoreSum = 0;
     let scoredCount = 0;
+    const industryScoreSum = new Map<string, number>();
+    const industryScoreCount = new Map<string, number>();
 
     if (leadIds.length) {
       const { data: analyses, error: analysesError } = await supabase
@@ -113,6 +171,18 @@ export const dashboardService = {
         if (row.overall_score !== null) {
           scoreSum += row.overall_score;
           scoredCount += 1;
+
+          const industry = industryByLead.get(row.lead_id);
+          if (industry) {
+            industryScoreSum.set(
+              industry,
+              (industryScoreSum.get(industry) ?? 0) + row.overall_score
+            );
+            industryScoreCount.set(
+              industry,
+              (industryScoreCount.get(industry) ?? 0) + 1
+            );
+          }
         }
 
         const band =
@@ -126,6 +196,18 @@ export const dashboardService = {
         else if (band === "COLD") cold += 1;
       }
     }
+
+    const byIndustry: IndustryDatum[] = Array.from(industryCounts.entries())
+      .map(([industry, count]) => {
+        const cnt = industryScoreCount.get(industry) ?? 0;
+        const sum = industryScoreSum.get(industry) ?? 0;
+        return {
+          industry,
+          count,
+          averageScore: cnt ? Math.round(sum / cnt) : null,
+        };
+      })
+      .sort((a, b) => b.count - a.count);
 
     const scoredLeadIds = new Set<string>();
     // "needingAction" = analyzed leads with a pending recommended action.
@@ -159,6 +241,8 @@ export const dashboardService = {
       averageScore,
       needingAction,
       recentLeads,
+      statusDistribution,
+      byIndustry,
     };
   },
 };

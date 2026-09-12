@@ -9,9 +9,9 @@ import {
   ClipboardList,
   Plus,
   ArrowRight,
+  Sparkles,
 } from "lucide-react";
 
-import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Card,
@@ -22,6 +22,9 @@ import {
 import { EmptyState } from "@/components/ui/empty-state";
 import { LeadStatusBadge } from "@/components/leads/lead-status-badge";
 import { LeadDistributionChart } from "@/components/dashboard/lead-distribution-chart";
+import { StatusDistributionChart } from "@/components/dashboard/status-distribution-chart";
+import { IndustryCountChart } from "@/components/dashboard/industry-count-chart";
+import { IndustryScoreChart } from "@/components/dashboard/industry-score-chart";
 import { dashboardService } from "@/services/dashboard";
 import { formatBudget, formatDate } from "@/lib/utils";
 
@@ -35,58 +38,110 @@ export default async function DashboardPage() {
   const stats = await dashboardService.getStats();
 
   const kpis = [
-    { label: "Total Leads", value: stats.total, icon: Users },
-    { label: "Hot Leads", value: stats.hot, icon: Flame },
-    { label: "Warm Leads", value: stats.warm, icon: ThermometerSun },
-    { label: "Cold Leads", value: stats.cold, icon: Snowflake },
+    {
+      label: "Total Leads",
+      value: stats.total,
+      icon: Users,
+      tint: "bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-300",
+      accent: "bg-indigo-500",
+    },
+    {
+      label: "Hot Leads",
+      value: stats.hot,
+      icon: Flame,
+      tint: "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300",
+      accent: "bg-red-500",
+    },
+    {
+      label: "Warm Leads",
+      value: stats.warm,
+      icon: ThermometerSun,
+      tint: "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300",
+      accent: "bg-amber-500",
+    },
+    {
+      label: "Cold Leads",
+      value: stats.cold,
+      icon: Snowflake,
+      tint: "bg-sky-50 text-sky-600 dark:bg-sky-950/40 dark:text-sky-300",
+      accent: "bg-sky-500",
+    },
   ];
 
   const insights = [
-    { label: "Hot Leads", value: stats.hot, icon: Flame },
-    { label: "Leads Needing Action", value: stats.needingAction, icon: ClipboardList },
+    {
+      label: "Hot Leads",
+      value: stats.hot,
+      icon: Flame,
+      tint: "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300",
+    },
+    {
+      label: "Leads Needing Action",
+      value: stats.needingAction,
+      icon: ClipboardList,
+      tint: "bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300",
+    },
     {
       label: "Average Lead Score",
       value: stats.total ? `${stats.averageScore}/100` : "—",
       icon: Target,
+      tint: "bg-indigo-50 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-300",
     },
   ];
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Dashboard"
-        description="An overview of your sales pipeline and lead quality."
-        action={
+      {/* Gradient hero header */}
+      <div className="hero-gradient relative overflow-hidden rounded-2xl p-6 text-white shadow-sm md:p-8">
+        <div className="grid-dots pointer-events-none absolute inset-0 opacity-70" />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+            <p className="mt-1 max-w-xl text-sm text-white/80">
+              An overview of your sales pipeline and AI lead quality.
+            </p>
+          </div>
           <div className="flex flex-wrap gap-2">
             <Link
               href="/leads"
-              className={buttonVariants({ variant: "outline" })}
+              className="inline-flex h-9 items-center justify-center rounded-md border border-white/30 bg-white/10 px-4 text-sm font-medium text-white backdrop-blur transition-colors hover:bg-white/20"
             >
               View All Leads
             </Link>
-            <Link href="/leads/new" className={buttonVariants()}>
+            <Link
+              href="/leads/new"
+              className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-white px-4 text-sm font-medium text-primary shadow-sm transition-colors hover:bg-white/90"
+            >
               <Plus className="h-4 w-4" />
               Add Lead
             </Link>
           </div>
-        }
-      />
+        </div>
+      </div>
 
       {/* KPI cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((kpi) => (
-          <Card key={kpi.label}>
+          <Card
+            key={kpi.label}
+            className="panel-elevated card-hover relative overflow-hidden"
+          >
+            <span
+              className={`absolute inset-x-0 top-0 h-1 ${kpi.accent}`}
+              aria-hidden="true"
+            />
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {kpi.label}
               </CardTitle>
-              <kpi.icon
-                className="h-4 w-4 text-muted-foreground"
-                aria-hidden="true"
-              />
+              <span
+                className={`flex h-10 w-10 items-center justify-center rounded-xl ${kpi.tint}`}
+              >
+                <kpi.icon className="h-5 w-5" aria-hidden="true" />
+              </span>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-semibold tabular-nums">
+              <div className="text-3xl font-semibold tabular-nums tracking-tight">
                 {kpi.value}
               </div>
             </CardContent>
@@ -94,11 +149,56 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Distribution chart */}
-        <Card className="lg:col-span-2">
+      {/* AI insights — prominent */}
+      <Card className="panel-elevated overflow-hidden">
+        <div className="h-1 w-full brand-gradient" aria-hidden="true" />
+        <CardHeader className="flex flex-row items-center justify-between space-y-0">
+          <CardTitle className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg brand-gradient text-white">
+              <Sparkles className="h-4 w-4" aria-hidden="true" />
+            </span>
+            AI Insights
+          </CardTitle>
+          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+            Powered by AI
+          </span>
+        </CardHeader>
+        <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {insights.map((item) => (
+            <div
+              key={item.label}
+              className="flex items-center justify-between rounded-xl border bg-gradient-to-br from-muted/40 to-transparent p-4 transition-colors hover:border-primary/30"
+            >
+              <div className="flex items-center gap-2.5 text-sm">
+                <span
+                  className={`flex h-9 w-9 items-center justify-center rounded-xl ${item.tint}`}
+                >
+                  <item.icon className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <span className="text-muted-foreground">{item.label}</span>
+              </div>
+              <span className="text-xl font-semibold tabular-nums">
+                {item.value}
+              </span>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <Card className="panel-elevated">
           <CardHeader>
-            <CardTitle>Lead distribution</CardTitle>
+            <CardTitle>Lead status distribution</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <StatusDistributionChart data={stats.statusDistribution} />
+          </CardContent>
+        </Card>
+
+        <Card className="panel-elevated">
+          <CardHeader>
+            <CardTitle>HOT / WARM / COLD distribution</CardTitle>
           </CardHeader>
           <CardContent>
             <LeadDistributionChart
@@ -110,32 +210,27 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* AI insights */}
-        <Card>
+        <Card className="panel-elevated">
           <CardHeader>
-            <CardTitle>AI insights</CardTitle>
+            <CardTitle>Leads by industry</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {insights.map((item) => (
-              <div
-                key={item.label}
-                className="flex items-center justify-between"
-              >
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <item.icon className="h-4 w-4" aria-hidden="true" />
-                  {item.label}
-                </div>
-                <span className="text-lg font-semibold tabular-nums">
-                  {item.value}
-                </span>
-              </div>
-            ))}
+          <CardContent>
+            <IndustryCountChart data={stats.byIndustry} />
+          </CardContent>
+        </Card>
+
+        <Card className="panel-elevated">
+          <CardHeader>
+            <CardTitle>Average lead score by industry</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <IndustryScoreChart data={stats.byIndustry} />
           </CardContent>
         </Card>
       </div>
 
       {/* Recent leads */}
-      <Card>
+      <Card className="panel-elevated">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <CardTitle>Recent leads</CardTitle>
           <Link

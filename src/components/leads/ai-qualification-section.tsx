@@ -22,6 +22,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { QualificationBadge } from "@/components/leads/qualification-badge";
 import type { StoredAnalysis } from "@/services/analyses";
 import type { AiAnalysis } from "@/validation/analysis";
 
@@ -80,16 +81,12 @@ function fromApi(a: AiAnalysis): DisplayAnalysis {
   };
 }
 
-function qualificationVariant(q: string): "success" | "warning" | "secondary" {
-  if (q === "HOT") return "success";
-  if (q === "WARM") return "warning";
-  return "secondary";
-}
-
-function levelVariant(level: string): "success" | "warning" | "secondary" {
-  if (level === "HIGH") return "success";
-  if (level === "MEDIUM") return "warning";
-  return "secondary";
+function levelVariant(
+  level: string
+): "successSoft" | "warm" | "neutral" {
+  if (level === "HIGH") return "successSoft";
+  if (level === "MEDIUM") return "warm";
+  return "neutral";
 }
 
 export function AiQualificationSection({
@@ -135,10 +132,13 @@ export function AiQualificationSection({
   }
 
   return (
-    <Card>
+    <Card className="panel-elevated overflow-hidden">
+      <div className="h-1 w-full brand-gradient" aria-hidden="true" />
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <CardTitle className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg brand-gradient text-white">
+            <Sparkles className="h-4 w-4" aria-hidden="true" />
+          </span>
           AI Qualification
         </CardTitle>
         <Button type="button" onClick={handleAnalyze} disabled={loading}>
@@ -224,9 +224,7 @@ function ScoreHeader({ analysis }: { analysis: DisplayAnalysis }) {
           <span className="text-xs uppercase tracking-wide text-muted-foreground">
             Qualification
           </span>
-          <Badge variant={qualificationVariant(analysis.qualification)}>
-            {analysis.qualification}
-          </Badge>
+          <QualificationBadge qualification={analysis.qualification} />
         </div>
         <div className="flex items-center gap-2">
           <span className="text-xs uppercase tracking-wide text-muted-foreground">
