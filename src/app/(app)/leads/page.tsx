@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Plus, GitCompare } from "lucide-react";
 
 import { PageHeader } from "@/components/layout/page-header";
 import { buttonVariants } from "@/components/ui/button";
@@ -24,10 +24,19 @@ export default async function LeadsPage() {
         title="Leads"
         description="Your full lead pipeline with qualification status."
         action={
-          <Link href="/leads/new" className={buttonVariants()}>
-            <Plus className="h-4 w-4" />
-            Add Lead
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/leads/compare"
+              className={buttonVariants({ variant: "outline" })}
+            >
+              <GitCompare className="h-4 w-4" />
+              Compare
+            </Link>
+            <Link href="/leads/new" className={buttonVariants()}>
+              <Plus className="h-4 w-4" />
+              Add Lead
+            </Link>
+          </div>
         }
       />
       <LeadsView leads={leads} />

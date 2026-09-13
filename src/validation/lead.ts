@@ -10,43 +10,46 @@ import { z } from "zod";
  * and coerce valid numbers.
  */
 
-const optionalText = (max: number) =>
+// Accepts string | null | undefined (FormData returns null for absent fields)
+// and normalizes empty/null to undefined before validating.
+const optionalText = (max: number, label = "This field") =>
   z
-    .string()
-    .trim()
-    .max(max)
-    .optional()
-    .transform((value) => (value ? value : undefined));
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((value) => {
+      const v = typeof value === "string" ? value.trim() : "";
+      return v === "" ? undefined : v;
+    })
+    .refine((value) => value === undefined || value.length <= max, {
+      message: `${label} is too long`,
+    });
 
 const optionalEmail = z
-  .string()
-  .trim()
-  .max(200)
-  .optional()
-  .transform((value) => (value ? value : undefined))
+  .union([z.string(), z.null(), z.undefined()])
+  .transform((value) => {
+    const v = typeof value === "string" ? value.trim() : "";
+    return v === "" ? undefined : v;
+  })
   .refine(
-    (value) => value === undefined || z.string().email().safeParse(value).success,
+    (value) =>
+      value === undefined || z.string().email().safeParse(value).success,
     { message: "Enter a valid email address" }
   );
 
 const optionalNonNegativeInt = z
-  .union([z.string(), z.number()])
-  .optional()
+  .union([z.string(), z.number(), z.null(), z.undefined()])
   .transform((value) => {
-    if (value === undefined || value === "" || value === null) return undefined;
+    if (value === undefined || value === null || value === "") return undefined;
     return typeof value === "number" ? value : Number(value);
   })
   .refine(
-    (value) =>
-      value === undefined || (Number.isInteger(value) && value >= 0),
+    (value) => value === undefined || (Number.isInteger(value) && value >= 0),
     { message: "Enter a valid whole number" }
   );
 
 const optionalNonNegativeNumber = z
-  .union([z.string(), z.number()])
-  .optional()
+  .union([z.string(), z.number(), z.null(), z.undefined()])
   .transform((value) => {
-    if (value === undefined || value === "" || value === null) return undefined;
+    if (value === undefined || value === null || value === "") return undefined;
     return typeof value === "number" ? value : Number(value);
   })
   .refine(
@@ -54,30 +57,28 @@ const optionalNonNegativeNumber = z
     { message: "Enter a valid amount" }
   );
 
+// Required text: also tolerate null (absent field) and produce a clear message.
+const requiredText = (max: number, label: string) =>
+  z
+    .union([z.string(), z.null(), z.undefined()])
+    .transform((value) => (typeof value === "string" ? value.trim() : ""))
+    .refine((value) => value.length >= 1, { message: `${label} is required` })
+    .refine((value) => value.length <= max, {
+      message: `${label} is too long`,
+    });
+
 export const leadInputSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "Name is required")
-    .max(120, "Name is too long"),
+  name: requiredText(120, "Name"),
   email: optionalEmail,
-  phone: optionalText(40),
-  company: z
-    .string()
-    .trim()
-    .min(1, "Company is required")
-    .max(120, "Company name is too long"),
-  jobTitle: optionalText(120),
-  industry: optionalText(80),
+  phone: optionalText(40, "Phone"),
+  company: requiredText(120, "Company"),
+  jobTitle: optionalText(120, "Job title"),
+  industry: optionalText(80, "Industry"),
   companySize: optionalNonNegativeInt,
   budget: optionalNonNegativeNumber,
-  timeline: optionalText(80),
-  requirement: z
-    .string()
-    .trim()
-    .min(1, "Requirement is required")
-    .max(2000, "Requirement is too long"),
-  painPoint: optionalText(2000),
+  timeline: optionalText(80, "Timeline"),
+  requirement: requiredText(2000, "Requirement"),
+  painPoint: optionalText(2000, "Pain point"),
 });
 
 /** Output type (after transforms) used by services. */

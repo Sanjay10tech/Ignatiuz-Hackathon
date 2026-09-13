@@ -33,6 +33,20 @@ export interface IndustryDatum {
   averageScore: number | null;
 }
 
+export interface TopLead {
+  id: string;
+  name: string;
+  company: string;
+  score: number;
+  qualification: "HOT" | "WARM" | "COLD";
+  nextAction: string | null;
+}
+
+export interface FunnelStep {
+  label: string;
+  count: number;
+}
+
 export interface DashboardStats {
   total: number;
   hot: number;
@@ -49,6 +63,12 @@ export interface DashboardStats {
   statusDistribution: StatusDatum[];
   /** Lead counts and average score grouped by industry. */
   byIndustry: IndustryDatum[];
+  /** Highest-scoring analyzed leads (top 3). */
+  topLeads: TopLead[];
+  /** Number of HOT leads with a pending action (drives the AI recommendation). */
+  hotNeedingAction: number;
+  /** Conversion funnel counts (Total → Analyzed → Contacted → Qualified → Converted). */
+  funnel: FunnelStep[];
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -150,6 +170,9 @@ export const dashboardService = {
     let scoredCount = 0;
     const industryScoreSum = new Map<string, number>();
     const industryScoreCount = new Map<string, number>();
+    // Latest score + qualification per lead (for the top-priority section).
+    const leadScore = new Map<string, number>();
+    const leadBand = new Map<string, "HOT" | "WARM" | "COLD">();
 
     if (leadIds.length) {
       const { data: analyses, error: analysesError } = await supabase
@@ -171,6 +194,7 @@ export const dashboardService = {
         if (row.overall_score !== null) {
           scoreSum += row.overall_score;
           scoredCount += 1;
+          leadScore.set(row.lead_id, row.overall_score);
 
           const industry = industryByLead.get(row.lead_id);
           if (industry) {
@@ -191,6 +215,7 @@ export const dashboardService = {
           row.qualification === "COLD"
             ? row.qualification
             : null;
+        if (band) leadBand.set(row.lead_id, band);
         if (band === "HOT") hot += 1;
         else if (band === "WARM") warm += 1;
         else if (band === "COLD") cold += 1;
@@ -209,28 +234,71 @@ export const dashboardService = {
       })
       .sort((a, b) => b.count - a.count);
 
-    const scoredLeadIds = new Set<string>();
-    // "needingAction" = analyzed leads with a pending recommended action.
-    let needingAction = 0;
+    const pendingActionLeadIds = new Set<string>();
+    // Latest recommended action text per lead (for the top-priority section).
+    const leadAction = new Map<string, string>();
     if (leadIds.length) {
       const { data: actions } = await supabase
         .from("recommended_actions")
-        .select("lead_id, status")
+        .select("lead_id, action, status, created_at")
         .in("lead_id", leadIds)
-        .eq("status", "pending");
+        .order("created_at", { ascending: false });
 
+      const seenAction = new Set<string>();
       for (const a of actions ?? []) {
-        if (!scoredLeadIds.has(a.lead_id)) {
-          scoredLeadIds.add(a.lead_id);
-          needingAction += 1;
+        if (!seenAction.has(a.lead_id)) {
+          seenAction.add(a.lead_id);
+          if (a.action) leadAction.set(a.lead_id, a.action);
         }
+        if (a.status === "pending") pendingActionLeadIds.add(a.lead_id);
       }
     }
+
+    // "needingAction" = leads with a pending recommended action.
+    const needingAction = pendingActionLeadIds.size;
 
     const averageScore = scoredCount
       ? Math.round(scoreSum / scoredCount)
       : 0;
     const unscored = Math.max(0, total - (hot + warm + cold));
+
+    // Top priority leads: analyzed leads ranked by score (desc), top 3.
+    const leadById = new Map(leads.map((l) => [l.id, l]));
+    const topLeads: TopLead[] = Array.from(leadScore.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([id, score]) => {
+        const lead = leadById.get(id);
+        return {
+          id,
+          name: lead?.name ?? "Unknown",
+          company: lead?.company ?? "",
+          score,
+          qualification: leadBand.get(id) ?? "COLD",
+          nextAction: leadAction.get(id) ?? null,
+        };
+      });
+
+    // HOT leads that still have a pending action (drives the AI recommendation).
+    let hotNeedingAction = 0;
+    for (const id of pendingActionLeadIds) {
+      if (leadBand.get(id) === "HOT") hotNeedingAction += 1;
+    }
+
+    // Conversion funnel from real status counts.
+    // Each step is cumulative: leads that reached at least that stage.
+    const c = (s: string) => statusCounts.get(s) ?? 0;
+    const analyzedPlus = total - c("new"); // everything past "new"
+    const contactedPlus = c("contacted") + c("qualified") + c("converted");
+    const qualifiedPlus = c("qualified") + c("converted");
+    const convertedCount = c("converted");
+    const funnel: FunnelStep[] = [
+      { label: "Total", count: total },
+      { label: "Analyzed", count: analyzedPlus },
+      { label: "Contacted", count: contactedPlus },
+      { label: "Qualified", count: qualifiedPlus },
+      { label: "Converted", count: convertedCount },
+    ];
 
     return {
       total,
@@ -243,6 +311,9 @@ export const dashboardService = {
       recentLeads,
       statusDistribution,
       byIndustry,
+      topLeads,
+      hotNeedingAction,
+      funnel,
     };
   },
 };

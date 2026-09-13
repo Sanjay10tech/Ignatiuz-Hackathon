@@ -2,11 +2,12 @@ import "server-only";
 
 import { getServerEnv } from "@/lib/env";
 import type { Lead } from "@/types";
+import { aiAnalysisSchema, type AiAnalysis } from "@/validation/analysis";
 import {
-  aiAnalysisSchema,
-  qualificationFromScore,
-  type AiAnalysis,
-} from "@/validation/analysis";
+  outreachEmailSchema,
+  type OutreachEmail,
+} from "@/validation/outreach";
+import type { StoredAnalysis } from "@/services/analyses";
 
 /**
  * Gemini-backed lead qualification.
@@ -82,9 +83,13 @@ function extractText(payload: unknown): string {
 }
 
 /**
- * Analyze a lead with Gemini and return a validated qualification result.
+ * Shared Gemini call: sends a prompt, returns parsed JSON text. Throws AiError
+ * on any failure. `context` is used only for log labels.
  */
-export async function qualifyLead(lead: Lead): Promise<AiAnalysis> {
+async function callGeminiJson(
+  prompt: string,
+  context: string
+): Promise<unknown> {
   const { GEMINI_API_KEY } = getServerEnv();
   if (!GEMINI_API_KEY) {
     throw new AiError("The AI service is not configured.");
@@ -96,21 +101,21 @@ export async function qualifyLead(lead: Lead): Promise<AiAnalysis> {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: buildPrompt(lead) }] }],
+        contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
-          temperature: 0.2,
+          temperature: 0.3,
           responseMimeType: "application/json",
         },
       }),
     });
   } catch (error) {
-    console.error("[gemini.qualifyLead] network error", error);
+    console.error(`[gemini.${context}] network error`, error);
     throw new AiError("Could not reach the AI service. Please try again.");
   }
 
   if (!response.ok) {
     console.error(
-      "[gemini.qualifyLead] non-OK response",
+      `[gemini.${context}] non-OK response`,
       response.status,
       await response.text().catch(() => "")
     );
@@ -120,13 +125,19 @@ export async function qualifyLead(lead: Lead): Promise<AiAnalysis> {
   const payload = await response.json().catch(() => null);
   const rawText = extractText(payload);
 
-  let parsedJson: unknown;
   try {
-    parsedJson = JSON.parse(rawText);
+    return JSON.parse(rawText);
   } catch {
-    console.error("[gemini.qualifyLead] invalid JSON from model", rawText);
+    console.error(`[gemini.${context}] invalid JSON from model`, rawText);
     throw new AiError("The AI returned an unexpected response. Please retry.");
   }
+}
+
+/**
+ * Analyze a lead with Gemini and return a validated qualification result.
+ */
+export async function qualifyLead(lead: Lead): Promise<AiAnalysis> {
+  const parsedJson = await callGeminiJson(buildPrompt(lead), "qualifyLead");
 
   const result = aiAnalysisSchema.safeParse(parsedJson);
   if (!result.success) {
@@ -134,7 +145,66 @@ export async function qualifyLead(lead: Lead): Promise<AiAnalysis> {
     throw new AiError("The AI returned an unexpected response. Please retry.");
   }
 
-  // Enforce score/qualification consistency regardless of what the model said.
-  const data = result.data;
-  return { ...data, qualification: qualificationFromScore(data.score) };
+  // The schema already derives a consistent qualification from the score.
+  return result.data;
+}
+
+function buildEmailPrompt(lead: Lead, analysis: StoredAnalysis | null): string {
+  const facts = [
+    `Contact name: ${lead.name}`,
+    `Company: ${lead.company}`,
+    `Job title: ${lead.jobTitle ?? "unknown"}`,
+    `Industry: ${lead.industry ?? "unknown"}`,
+    `Requirement: ${lead.requirement}`,
+    `Pain point: ${lead.painPoint ?? "unknown"}`,
+    `Timeline: ${lead.timeline ?? "unknown"}`,
+  ];
+  if (analysis) {
+    facts.push(
+      `AI qualification: ${analysis.qualification} (score ${analysis.score}/100)`,
+      `Buying intent: ${analysis.buyingIntent}`,
+      `Recommended next action: ${analysis.nextAction || "n/a"}`
+    );
+    if (analysis.signals.length) {
+      facts.push(`Positive signals: ${analysis.signals.join("; ")}`);
+    }
+  }
+
+  return [
+    "You are an expert B2B sales rep writing a concise, personalized",
+    "follow-up email to a lead. Keep it professional, warm, and specific to",
+    "their requirement and pain point. 120-160 words. No placeholders like",
+    "[Name] — use the actual contact name. Sign off as 'The LeadIQ Team'.",
+    "",
+    "Return ONLY a JSON object (no markdown, no code fences) with exactly:",
+    '{"subject": string, "body": string}',
+    "",
+    "Lead:",
+    facts.join("\n"),
+  ].join("\n");
+}
+
+/**
+ * Generate a personalized follow-up email for a lead, informed by its latest
+ * AI analysis when available. Returns a validated subject + body.
+ */
+export async function generateOutreachEmail(
+  lead: Lead,
+  analysis: StoredAnalysis | null
+): Promise<OutreachEmail> {
+  const parsedJson = await callGeminiJson(
+    buildEmailPrompt(lead, analysis),
+    "generateOutreachEmail"
+  );
+
+  const result = outreachEmailSchema.safeParse(parsedJson);
+  if (!result.success) {
+    console.error(
+      "[gemini.generateOutreachEmail] schema validation failed",
+      result.error
+    );
+    throw new AiError("The AI returned an unexpected response. Please retry.");
+  }
+
+  return result.data;
 }

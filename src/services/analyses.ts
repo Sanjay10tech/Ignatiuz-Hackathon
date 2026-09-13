@@ -198,4 +198,36 @@ export const analysesService = {
       createdAt: analysis.created_at,
     };
   },
+
+  /**
+   * Save a generated outreach email to the existing `outreach` table, scoped
+   * to a lead the user owns. Best-effort: failures are logged, not thrown, so
+   * a save issue never blocks showing the generated email.
+   */
+  async saveOutreach(
+    leadId: string,
+    email: { subject: string; body: string }
+  ): Promise<void> {
+    const { supabase, userId } = await getContext();
+
+    const { data: lead } = await supabase
+      .from("leads")
+      .select("id")
+      .eq("id", leadId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!lead) return;
+
+    const { error } = await supabase.from("outreach").insert({
+      lead_id: leadId,
+      subject: email.subject,
+      body: email.body,
+      type: "email",
+    });
+
+    if (error) {
+      console.error("[analysesService.saveOutreach]", error);
+    }
+  },
 };

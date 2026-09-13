@@ -25,6 +25,9 @@ import { LeadDistributionChart } from "@/components/dashboard/lead-distribution-
 import { StatusDistributionChart } from "@/components/dashboard/status-distribution-chart";
 import { IndustryCountChart } from "@/components/dashboard/industry-count-chart";
 import { IndustryScoreChart } from "@/components/dashboard/industry-score-chart";
+import { TopPriorityLeads } from "@/components/dashboard/top-priority-leads";
+import { AiRecommendation } from "@/components/dashboard/ai-recommendation";
+import { ConversionFunnel } from "@/components/dashboard/conversion-funnel";
 import { dashboardService } from "@/services/dashboard";
 import { formatBudget, formatDate } from "@/lib/utils";
 
@@ -147,6 +150,15 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      {/* AI recommendation banner */}
+      <AiRecommendation stats={stats} />
+
+      {/* Top priority leads + conversion funnel */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <TopPriorityLeads leads={stats.topLeads} />
+        <ConversionFunnel steps={stats.funnel} />
       </div>
 
       {/* AI insights — prominent */}

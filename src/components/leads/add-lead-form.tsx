@@ -51,6 +51,30 @@ export function AddLeadForm() {
     }
   }, [state.ok, router, toast]);
 
+  // When validation fails, bring the first errored field into view and focus
+  // it so the user can see what needs fixing (fields may be scrolled away).
+  const fieldErrors = state.fieldErrors;
+  React.useEffect(() => {
+    if (!fieldErrors) return;
+    const order = [
+      "name",
+      "company",
+      "email",
+      "jobTitle",
+      "industry",
+      "budget",
+      "timeline",
+      "requirement",
+      "painPoint",
+    ];
+    const first = order.find((k) => fieldErrors[k]);
+    if (first) {
+      const el = document.getElementById(first);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      (el as HTMLElement | null)?.focus?.({ preventScroll: true });
+    }
+  }, [fieldErrors]);
+
   return (
     <form action={formAction} noValidate>
       <Card className="panel-elevated">
@@ -76,7 +100,16 @@ export function AddLeadForm() {
                 className="mt-0.5 h-4 w-4 shrink-0 text-destructive"
                 aria-hidden="true"
               />
-              <p>{state.error}</p>
+              <div>
+                <p>{state.error}</p>
+                {fieldErrors && Object.keys(fieldErrors).length ? (
+                  <ul className="mt-1 list-disc pl-4 text-destructive">
+                    {Object.entries(fieldErrors).map(([field, message]) => (
+                      <li key={field}>{message}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
             </div>
           ) : null}
 

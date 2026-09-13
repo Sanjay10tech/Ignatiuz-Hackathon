@@ -12,6 +12,7 @@ import {
 import { LeadStatusBadge } from "@/components/leads/lead-status-badge";
 import { DeleteLeadButton } from "@/components/leads/delete-lead-button";
 import { AiQualificationSection } from "@/components/leads/ai-qualification-section";
+import { FollowUpEmail } from "@/components/leads/follow-up-email";
 import { formatBudget } from "@/lib/utils";
 import type { StoredAnalysis } from "@/services/analyses";
 
@@ -87,6 +88,8 @@ export function LeadDetail({
       </Card>
 
       <AiQualificationSection leadId={lead.id} initialAnalysis={analysis} />
+
+      <FollowUpEmail leadId={lead.id} />
     </div>
   );
 }
