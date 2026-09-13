@@ -74,12 +74,15 @@ export default function AuthLayout({
           </ul>
         </div>
 
-        <p
-          className="animate-fade-up relative text-xs text-white/50"
+        <div
+          className="animate-fade-up relative space-y-1"
           style={{ animationDelay: "440ms" }}
         >
-          Sales Intelligence Engine
-        </p>
+          <p className="text-xs text-white/50">Sales Intelligence Engine</p>
+          <p className="text-xs text-white/40">
+            © 2026 Sanjay Kumar Shukla. All rights reserved.
+          </p>
+        </div>
       </div>
 
       {/* Form panel */}
@@ -96,6 +99,11 @@ export default function AuthLayout({
             </p>
           </div>
           {children}
+
+          {/* Copyright — mobile only (the hero footer covers desktop). */}
+          <p className="mt-6 text-center text-xs text-muted-foreground lg:hidden">
+            © 2026 Sanjay Kumar Shukla. All rights reserved.
+          </p>
         </div>
       </div>
     </div>
